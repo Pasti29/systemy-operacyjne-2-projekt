@@ -6,89 +6,87 @@
 #include <cstdlib>
 #include <time.h>
 
-pthread_t threadDraw;
-
 std::list<std::vector<int>> L;
 
-void horizontalWall(int startX, int startY, int width, char c[2], short index)
+void horizontalWall(int startY, int startX, int width, char c[2], short index)
 {
     attron(COLOR_PAIR(index));
-    move(startX, startY);
+    move(startY, startX);
     for (int i = 0; i < width; i++)
     {
         printw(c);
-        startY++;
+        startX++;
     }
     attroff(COLOR_PAIR(index));
 }
 
-void verticalWall(int startX, int startY, int height, char c[2], short index)
+void verticalWall(int startY, int startX, int height, char c[2], short index)
 {
     attron(COLOR_PAIR(index));
     for (int i = 0; i < height; i++)
     {
-        startX++;
-        move(startX, startY);
+        startY++;
+        move(startY, startX);
         printw(c);
     }
     attroff(COLOR_PAIR(index));
 }
 
-void outerWallTrack1(int startX, int startY, int width, int height, char c[2], short index)
+void outerWallTrack1(int startY, int startX, int width, int height, char c[2], short index)
 {
-    horizontalWall(startX, startY, width, c, index);
-    verticalWall(startX, startY + width - 1, height, c, index);
-    horizontalWall(startX + height + 1, startY, width, c, index);
+    horizontalWall(startY, startX, width, c, index);
+    verticalWall(startY, startX + width - 1, height, c, index);
+    horizontalWall(startY + height + 1, startX, width, c, index);
 }
 
-void innerWallTrack1(int startX, int startY, int width, int height, char c[2], short index)
+void innerWallTrack1(int startY, int startX, int width, int height, char c[2], short index)
 {
-   horizontalWall(startX, startY, 6, c, index);
-   horizontalWall(startX, startY  + 13, width - 13, c, index);
-   verticalWall(startX, startY + width - 1, height, c, index);
-   horizontalWall(startX + height + 1, startY, 6, c, index);
-   horizontalWall(startX  + height + 1, startY  + 13, width - 13, c, index);
-   verticalWall(startX, startY + 5, height, c, index);
-   verticalWall(startX, startY + 13, height, c, index);
+   horizontalWall(startY, startX, 6, c, index);
+   horizontalWall(startY, startX  + 13, width - 13, c, index);
+   verticalWall(startY, startX + width - 1, height, c, index);
+   horizontalWall(startY + height + 1, startX, 6, c, index);
+   horizontalWall(startY  + height + 1, startX  + 13, width - 13, c, index);
+   verticalWall(startY, startX + 5, height, c, index);
+   verticalWall(startY, startX + 13, height, c, index);
 }
 
-void wallTrack2(int startX, int startY, int width, int height, char c[2], short index)
+void wallTrack2(int startY, int startX, int width, int height, char c[2], short index)
 {
-    horizontalWall(startX, startY, width, c, index);
-    verticalWall(startX, startY + width - 1, height, c, index);
-    verticalWall(startX, startY, height, c, index);
-    horizontalWall(startX + height + 1, startY, width, c, index);
+    horizontalWall(startY, startX, width, c, index);
+    verticalWall(startY, startX + width - 1, height, c, index);
+    verticalWall(startY, startX, height, c, index);
+    horizontalWall(startY + height + 1, startX, width, c, index);
 }
 
 void buildTrack1(int width, int height)
 {
     init_pair(1, COLOR_BLUE, COLOR_BLACK);
     height -= 2;
-    int startX = 10;
-    int startY = 20;
+    int startY = 10;
+    int startX = 20;
 
-    outerWallTrack1(startX, startY, width, height, (char*)"@", 1);
+    outerWallTrack1(startY, startX, width, height, (char*)"@", 1);
 
-    startX += 4;
+    startY += 4;
     width -= 8;
     height -= 8;
-    innerWallTrack1(startX, startY, width, height, (char*)"@", 1);
+    innerWallTrack1(startY, startX, width, height, (char*)"@", 1);
 }
 
 void buildTrack2(int width, int height)
 {
     init_pair(2, COLOR_CYAN, COLOR_BLACK);
     height -= 2;
-    int startX = 0;
-    int startY = 45;
+    int startY = 0;
+    int startX = 45;
 
-    wallTrack2(startX, startY, width, height, (char*)"#", 2);
+    wallTrack2(startY, startX, width, height, (char*)"#", 2);
 
-    startX += 4;
-    startY += 8;
+    startY += 4;
+    startX += 8;
     width -= 16;
     height -= 8;
-    wallTrack2(startX, startY, width, height, (char*)"#", 2);
+    wallTrack2(startY, startX, width, height, (char*)"#", 2);
 }
 
 void *moveChar(void *args)
@@ -103,29 +101,63 @@ void *moveChar(void *args)
             mvaddch(v[2], v[3], 'C');
             refresh();
         }
-        // else
-        // {
-        //     sleep(1);
-        // }
-        
+        else
+        {
+            usleep(1);
+        }
     }
     return NULL;
 }
 
-void *moveCar(void *threadMove)
+void *moveCar(void *arg)
 {
-    int *sleepTime = (int *)threadMove;
-    int startX = 12;
-    int startY = 20;
-    int newX = startX;
+    int sleepTime = *(int *)arg;
+    int startY = 12;
+    int startX = 20;
     int newY = startY;
+    int newX = startX;
+    int lap = 0;
+
     while(true)
     {
-        L.push_back({startX, startY, newX, newY});
-        sleep(*sleepTime);
-        startX = newX;
+        L.push_back({startY, startX, newY, newX});
+        usleep(sleepTime);
         startY = newY;
-        newY++;
+        startX = newX;
+        if (lap <= 3)
+        {
+            if (startY == 12 && startX == 29)
+            {
+                lap++;
+            }
+
+            if (startY == 37 && startX > 29)
+            {
+                newX--;
+            }
+            else if (startY < 37 && startX == 115)
+            {
+                newY++;
+            }
+            else if (startY == 12 && startX < 115)
+            {
+                newX++;
+            }
+            else if (lap < 3)
+            {
+                newY--;
+            }
+            else if (lap == 3 && startY == 37 && startX > 20)
+            {
+                newX--;
+            }
+            else
+            {
+                return NULL;
+                
+            }
+        }
+        
     }
 }
 
@@ -135,30 +167,25 @@ int main(int argc, char const *argv[])
     srand(time(NULL));
 
     pthread_t thread;
-    pthread_t thread1, thread2, thread3, thread4;
-    int v1, v2, v3, v4;
+
     initscr();
     curs_set(0);
     start_color();
     buildTrack1(100, 30);
     buildTrack2(50, 50);
     refresh();
-    sleep(5);
-    v1 = 4;
-    v2 = 3;
-    v3 = 2;
-    v4 = 1;
+
     pthread_create(&thread, NULL, moveChar, NULL);
-    pthread_create(&thread1, NULL, moveCar, &v1);
-    // moveCar();
-    sleep(10);
-    pthread_create(&thread2, NULL, moveCar, &v2);
-    sleep(10);
-    pthread_create(&thread3, NULL, moveCar, &v3);
-    sleep(10);
-    pthread_create(&thread4, NULL, moveCar, &v4);
+
+    while (true)
+    {
+        pthread_t threadCar;
+        int v = (rand() % 50000) + 50000;
+        pthread_create(&threadCar, NULL, moveCar, &v);
+        sleep((rand() % 10) + 5);
+    }
+    
     pthread_join(thread, NULL);
-    getch();
     endwin();
 
     return 0;
