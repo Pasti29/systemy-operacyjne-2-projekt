@@ -4,7 +4,7 @@
 #include <list>
 #include <vector>
 #include <cstdlib>
-#include <time.h>
+#include <thread>
 
 std::list<std::vector<int>> L;
 
@@ -89,7 +89,7 @@ void buildTrack2(int width, int height)
     wallTrack2(startY, startX, width, height, (char*)"#", 2);
 }
 
-void *moveChar(void *args)
+void moveChar()
 {
     while (true)
     {
@@ -106,12 +106,11 @@ void *moveChar(void *args)
             usleep(1);
         }
     }
-    return NULL;
+    return;
 }
 
-void *moveCar(void *arg)
+void moveCar(int sleepTime)
 {
-    int sleepTime = *(int *)arg;
     int startY = 12;
     int startX = 20;
     int newY = startY;
@@ -131,11 +130,11 @@ void *moveCar(void *arg)
                 lap++;
             }
 
-            if (startY == 37 && startX > 29)
+            if (startY == 35 && startX > 29)
             {
                 newX--;
             }
-            else if (startY < 37 && startX == 115)
+            else if (startY < 35 && startX == 115)
             {
                 newY++;
             }
@@ -147,13 +146,13 @@ void *moveCar(void *arg)
             {
                 newY--;
             }
-            else if (lap == 3 && startY == 37 && startX > 20)
+            else if (lap == 3 && startY == 35 && startX > 20)
             {
                 newX--;
             }
             else
             {
-                return NULL;
+                return;
                 
             }
         }
@@ -166,26 +165,26 @@ int main(int argc, char const *argv[])
 {
     srand(time(NULL));
 
-    pthread_t thread;
+    // pthread_t thread;
 
     initscr();
     curs_set(0);
     start_color();
-    buildTrack1(100, 30);
-    buildTrack2(50, 50);
+    buildTrack1(100, 28);
+    buildTrack2(46, 46);
     refresh();
 
-    pthread_create(&thread, NULL, moveChar, NULL);
+    std::thread t(moveChar);
+
+    std::list<std::thread> threadList;
 
     while (true)
     {
-        pthread_t threadCar;
         int v = (rand() % 50000) + 50000;
-        pthread_create(&threadCar, NULL, moveCar, &v);
+        threadList.push_back(std::thread(moveCar, v));
         sleep((rand() % 10) + 5);
     }
-    
-    pthread_join(thread, NULL);
+    t.join();
     endwin();
 
     return 0;
