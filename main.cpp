@@ -5,6 +5,7 @@
 #include <cstdlib>
 #include <thread>
 #include <random>
+#include <iostream>
 
 #define BLUE_PAIR        1
 #define CYAN_PAIR        2
@@ -15,12 +16,12 @@
 #define YELLOW_PAIR      7
 
 struct CAR {
-    int oldX;
-    int oldY;
-    int newX;
-    int newY;
+    int x;
+    int y;
+    int sleepTime;
     char c;
     int color;
+    bool active = true;
 };
 
 std::list<CAR> L;
@@ -114,111 +115,118 @@ void buildTrack2(int width, int height)
 
 void moveChar()
 {
+    std::list<std::vector<int>> list;
     while (true)
     {
-        if (!L.empty())
+        while(!list.empty())
         {
-            CAR v = L.front();
-            L.pop_front();
-            attron(COLOR_PAIR(v.color));
-            mvaddch(v.oldX, v.oldY, ' ');
-            mvaddch(v.newX, v.newY, v.c);
-            attroff(COLOR_PAIR(v.color));
+            std::vector<int> v = list.front();
+            list.pop_front();
+            // std::cout << v[0] << " " << v[1] << std::endl;
+            // sleep(1);
+            mvaddch(v[0], v[1], ' ');
+        }
+
+        for (CAR car : L)
+        {
+            // std::cout << car.x << " " << car.y << " " << car.c << " " << std::endl;
+            // sleep(1);
+            attron(COLOR_PAIR(car.color));
+            mvaddch(car.x, car.y, car.c);
+            list.push_back({car.x, car.y});
+            attroff(COLOR_PAIR(car.color));
             refresh();
+            
         }
-        else
-        {
-            usleep(100);
-        }
+
+        
+        usleep(100'000);
     }
     return;
 }
 
-void moveOuterCar(int sleepTime, char c, int color, int offset)
+void moveOuterCar(CAR* car)
 {
-    int startY = 15 + offset;
-    int startX = 49;
-    int newY = startY;
-    int newX = startX;
+    // int startY = 15 + offset;
+    // int startX = 49;
+    // int newY = startY;
+    // int newX = startX;
 
     while(true)
     {
-        L.push_back({startY, startX, newY, newX, c, color});
-        usleep(sleepTime);
-        startY = newY;
-        startX = newX;
-        if (startY > 2 && startX == 49)
+        // L.push_back({startY, startX, newY, newX, c, color});
+        usleep((*car).sleepTime);
+        // startY = newY;
+        // startX = newX;
+        if ((*car).y > 2 && (*car).x == 49)
         {
-            newY--;
+            (*car).y = (*car).y - 1;
         }
-
-        if (startY == 2 && startX < 86)
+        else if ((*car).y == 2 && (*car).x < 86)
         {
-            newX++;
+            (*car).x = (*car).x + 1;
         }
-
-        if (startY < 43 && startX == 86)
+        else if ((*car).y < 43 && (*car).x == 86)
         {
-            newY++;
+            (*car).y = (*car).y + 1;
         }
-
-        if (startY == 43 && startX > 49)
+        else if ((*car).y == 43 && (*car).x > 49)
         {
-            newX--;
+            (*car).x = (*car).x - 1;
         }
     }
 }
 
-void moveInnerCar(int sleepTime, char c, int color)
-{
-    int startY = 12;
-    int startX = 20;
-    int newY = startY;
-    int newX = startX;
-    int lap = 0;
+// void moveInnerCar(int sleepTime, char c, int color)
+// {
+//     int startY = 12;
+//     int startX = 20;
+//     int newY = startY;
+//     int newX = startX;
+//     int lap = 0;
 
-    while(true)
-    {
-        L.push_back({startY, startX, newY, newX, c, color});
-        usleep(sleepTime);
-        startY = newY;
-        startX = newX;
-        if (lap <= 3)
-        {
-            if (startY == 12 && startX == 29)
-            {
-                lap++;
-            }
+//     while(true)
+//     {
+//         L.push_back({startY, startX, newY, newX, c, color});
+//         usleep(sleepTime);
+//         startY = newY;
+//         startX = newX;
+//         if (lap <= 3)
+//         {
+//             if (startY == 12 && startX == 29)
+//             {
+//                 lap++;
+//             }
 
-            if (startY == 35 && startX > 29)
-            {
-                newX--;
-            }
-            else if (startY < 35 && startX == 115)
-            {
-                newY++;
-            }
-            else if (startY == 12 && startX < 115)
-            {
-                newX++;
-            }
-            else if (lap < 3)
-            {
-                newY--;
-            }
-            else if (lap == 3 && startY == 35 && startX > 20)
-            {
-                newX--;
-            }
-            else
-            {
-                return;
+//             if (startY == 35 && startX > 29)
+//             {
+//                 newX--;
+//             }
+//             else if (startY < 35 && startX == 115)
+//             {
+//                 newY++;
+//             }
+//             else if (startY == 12 && startX < 115)
+//             {
+//                 newX++;
+//             }
+//             else if (lap < 3)
+//             {
+//                 newY--;
+//             }
+//             else if (lap == 3 && startY == 35 && startX > 20)
+//             {
+//                 newX--;
+//             }
+//             else
+//             {
+//                 return;
                 
-            }
-        }
+//             }
+//         }
         
-    }
-}
+//     }
+// }
 
 
 int main(int argc, char const *argv[])
@@ -252,19 +260,27 @@ int main(int argc, char const *argv[])
 
     std::list<std::thread> threadList;
 
-    threadList.push_back(std::thread(moveOuterCar, 60'000, (char)distChar(gen), distColor(gen), 0));
+    CAR c1 = {49, 15, 60'000, (char)distChar(gen), distColor(gen)};
+    L.push_back({49, 15, 60'000, (char)distChar(gen), distColor(gen)});
+    threadList.push_back(std::thread(moveOuterCar, &(L.back())));
     usleep(10);
-    threadList.push_back(std::thread(moveOuterCar, 60'000, (char)distChar(gen), distColor(gen), 10));
+
+    CAR c2 = {49, 25, 60'000, (char)distChar(gen), distColor(gen)};
+    L.push_back(c2);
+    threadList.push_back(std::thread(moveOuterCar, &(L.back())));
     usleep(10);
-    threadList.push_back(std::thread(moveOuterCar, 60'000, (char)distChar(gen), distColor(gen), 20));
+
+    CAR c3 = {49, 35, 60'000, (char)distChar(gen), distColor(gen)};
+    L.push_back(c3);
+    threadList.push_back(std::thread(moveOuterCar, &(L.back())));
     usleep(10);
 
     while (true)
     {
-        int v = distSleep(gen);
-        char c = (char) distChar(gen);
-        int color = distColor(gen);
-        threadList.push_back(std::thread(moveInnerCar, v, c, color));
+        // int v = distSleep(gen);
+        // char c = (char) distChar(gen);
+        // int color = distColor(gen);
+        // threadList.push_back(std::thread(moveInnerCar, v, c, color));
         sleep(distFactorySleep(gen));
     }
     t.join();
