@@ -1,12 +1,29 @@
 #include <ncurses.h>
-#include <pthread.h>
 #include <unistd.h>
 #include <list>
 #include <vector>
 #include <cstdlib>
 #include <thread>
+#include <random>
 
-std::list<std::vector<int>> L;
+#define BLUE_PAIR        1
+#define CYAN_PAIR        2
+#define GREEN_PAIR       3
+#define MAGENTA_PAIR     4
+#define RED_PAIR         5
+#define WHITE_PAIR       6
+#define YELLOW_PAIR      7
+
+struct CAR {
+    int oldX;
+    int oldY;
+    int newX;
+    int newY;
+    char c;
+    int color;
+};
+
+std::list<CAR> L;
 
 void horizontalWall(int startY, int startX, int width, char c[2], short index)
 {
@@ -34,18 +51,26 @@ void verticalWall(int startY, int startX, int height, char c[2], short index)
 
 void outerWallTrack1(int startY, int startX, int width, int height, char c[2], short index)
 {
-    horizontalWall(startY, startX, width, c, index);
+    horizontalWall(startY, startX, 25, c, index);
+    horizontalWall(startY, startX + 34, 29, c, index);
+    horizontalWall(startY, startX + 70, 30, c, index);
     verticalWall(startY, startX + width - 1, height, c, index);
-    horizontalWall(startY + height + 1, startX, width, c, index);
+    horizontalWall(startY + height + 1, startX, 25, c, index);
+    horizontalWall(startY + height + 1, startX + 34, 29, c, index);
+    horizontalWall(startY + height + 1, startX + 70, 30, c, index);
 }
 
 void innerWallTrack1(int startY, int startX, int width, int height, char c[2], short index)
 {
    horizontalWall(startY, startX, 6, c, index);
-   horizontalWall(startY, startX  + 13, width - 13, c, index);
+   horizontalWall(startY, startX  + 13, 13, c, index);
+   horizontalWall(startY, startX  + 33, 29, c, index);
+   horizontalWall(startY, startX  + 70, 22, c, index);
    verticalWall(startY, startX + width - 1, height, c, index);
    horizontalWall(startY + height + 1, startX, 6, c, index);
-   horizontalWall(startY  + height + 1, startX  + 13, width - 13, c, index);
+   horizontalWall(startY  + height + 1, startX  + 13, 13, c, index);
+   horizontalWall(startY  + height + 1, startX  + 33, 29, c, index);
+   horizontalWall(startY  + height + 1, startX  + 70, 22, c, index);
    verticalWall(startY, startX + 5, height, c, index);
    verticalWall(startY, startX + 13, height, c, index);
 }
@@ -60,33 +85,31 @@ void wallTrack2(int startY, int startX, int width, int height, char c[2], short 
 
 void buildTrack1(int width, int height)
 {
-    init_pair(1, COLOR_BLUE, COLOR_BLACK);
     height -= 2;
     int startY = 10;
     int startX = 20;
 
-    outerWallTrack1(startY, startX, width, height, (char*)"@", 1);
+    outerWallTrack1(startY, startX, width, height, (char*)"@", BLUE_PAIR);
 
     startY += 4;
     width -= 8;
     height -= 8;
-    innerWallTrack1(startY, startX, width, height, (char*)"@", 1);
+    innerWallTrack1(startY, startX, width, height, (char*)"@", BLUE_PAIR);
 }
 
 void buildTrack2(int width, int height)
 {
-    init_pair(2, COLOR_CYAN, COLOR_BLACK);
     height -= 2;
     int startY = 0;
     int startX = 45;
 
-    wallTrack2(startY, startX, width, height, (char*)"#", 2);
+    wallTrack2(startY, startX, width, height, (char*)"#", CYAN_PAIR);
 
     startY += 4;
     startX += 8;
     width -= 16;
     height -= 8;
-    wallTrack2(startY, startX, width, height, (char*)"#", 2);
+    wallTrack2(startY, startX, width, height, (char*)"#", CYAN_PAIR);
 }
 
 void moveChar()
@@ -95,21 +118,58 @@ void moveChar()
     {
         if (!L.empty())
         {
-            std::vector<int> v = L.front();
+            CAR v = L.front();
             L.pop_front();
-            mvaddch(v[0], v[1], ' ');
-            mvaddch(v[2], v[3], 'C');
+            attron(COLOR_PAIR(v.color));
+            mvaddch(v.oldX, v.oldY, ' ');
+            mvaddch(v.newX, v.newY, v.c);
+            attroff(COLOR_PAIR(v.color));
             refresh();
         }
         else
         {
-            usleep(1);
+            usleep(100);
         }
     }
     return;
 }
 
-void moveCar(int sleepTime)
+void moveOuterCar(int sleepTime, char c, int color, int offset)
+{
+    int startY = 15 + offset;
+    int startX = 49;
+    int newY = startY;
+    int newX = startX;
+
+    while(true)
+    {
+        L.push_back({startY, startX, newY, newX, c, color});
+        usleep(sleepTime);
+        startY = newY;
+        startX = newX;
+        if (startY > 2 && startX == 49)
+        {
+            newY--;
+        }
+
+        if (startY == 2 && startX < 86)
+        {
+            newX++;
+        }
+
+        if (startY < 43 && startX == 86)
+        {
+            newY++;
+        }
+
+        if (startY == 43 && startX > 49)
+        {
+            newX--;
+        }
+    }
+}
+
+void moveInnerCar(int sleepTime, char c, int color)
 {
     int startY = 12;
     int startX = 20;
@@ -119,7 +179,7 @@ void moveCar(int sleepTime)
 
     while(true)
     {
-        L.push_back({startY, startX, newY, newX});
+        L.push_back({startY, startX, newY, newX, c, color});
         usleep(sleepTime);
         startY = newY;
         startX = newX;
@@ -163,13 +223,26 @@ void moveCar(int sleepTime)
 
 int main(int argc, char const *argv[])
 {
-    srand(time(NULL));
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> distSleep(50'000, 100'000);
+    std::uniform_int_distribution<> distChar(66, 90);
+    std::uniform_int_distribution<> distColor(3, 7);
 
-    // pthread_t thread;
+    srand(time(NULL));
 
     initscr();
     curs_set(0);
     start_color();
+
+    init_pair(BLUE_PAIR, COLOR_BLUE, COLOR_BLACK);
+    init_pair(CYAN_PAIR, COLOR_CYAN, COLOR_BLACK);
+    init_pair(GREEN_PAIR, COLOR_GREEN, COLOR_BLACK);
+    init_pair(MAGENTA_PAIR, COLOR_MAGENTA, COLOR_BLACK);
+    init_pair(RED_PAIR, COLOR_RED, COLOR_BLACK);
+    init_pair(WHITE_PAIR, COLOR_WHITE, COLOR_BLACK);
+    init_pair(YELLOW_PAIR, COLOR_YELLOW, COLOR_BLACK);
+
     buildTrack1(100, 28);
     buildTrack2(46, 46);
     refresh();
@@ -178,10 +251,16 @@ int main(int argc, char const *argv[])
 
     std::list<std::thread> threadList;
 
+    threadList.push_back(std::thread(moveOuterCar, 60'000, (char)distChar(gen), distColor(gen), 0));
+    threadList.push_back(std::thread(moveOuterCar, 60'000, (char)distChar(gen), distColor(gen), 10));
+    threadList.push_back(std::thread(moveOuterCar, 60'000, (char)distChar(gen), distColor(gen), 20));
+
     while (true)
     {
-        int v = (rand() % 50000) + 50000;
-        threadList.push_back(std::thread(moveCar, v));
+        int v = distSleep(gen);
+        char c = (char) distChar(gen);
+        int color = distColor(gen);
+        threadList.push_back(std::thread(moveInnerCar, v, c, color));
         sleep((rand() % 10) + 5);
     }
     t.join();
