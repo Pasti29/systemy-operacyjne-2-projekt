@@ -228,6 +228,7 @@ int main(int argc, char const *argv[])
     std::uniform_int_distribution<> distSleep(50'000, 100'000);
     std::uniform_int_distribution<> distChar(66, 90);
     std::uniform_int_distribution<> distColor(3, 7);
+    std::uniform_int_distribution<> distFactorySleep(5, 10);
 
     srand(time(NULL));
 
@@ -252,8 +253,11 @@ int main(int argc, char const *argv[])
     std::list<std::thread> threadList;
 
     threadList.push_back(std::thread(moveOuterCar, 60'000, (char)distChar(gen), distColor(gen), 0));
+    usleep(10);
     threadList.push_back(std::thread(moveOuterCar, 60'000, (char)distChar(gen), distColor(gen), 10));
+    usleep(10);
     threadList.push_back(std::thread(moveOuterCar, 60'000, (char)distChar(gen), distColor(gen), 20));
+    usleep(10);
 
     while (true)
     {
@@ -261,7 +265,7 @@ int main(int argc, char const *argv[])
         char c = (char) distChar(gen);
         int color = distColor(gen);
         threadList.push_back(std::thread(moveInnerCar, v, c, color));
-        sleep((rand() % 10) + 5);
+        sleep(distFactorySleep(gen));
     }
     t.join();
     endwin();
