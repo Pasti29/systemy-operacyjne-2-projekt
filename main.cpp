@@ -2,20 +2,22 @@
 #include <unistd.h>
 #include <list>
 #include <vector>
-#include <cstdlib>
 #include <thread>
 #include <random>
-#include <iostream>
 
-#define BLUE_PAIR        1
-#define CYAN_PAIR        2
-#define GREEN_PAIR       3
-#define MAGENTA_PAIR     4
-#define RED_PAIR         5
-#define WHITE_PAIR       6
-#define YELLOW_PAIR      7
+#define BLUE_PAIR 1
+#define CYAN_PAIR 2
+#define GREEN_PAIR 3
+#define MAGENTA_PAIR 4
+#define RED_PAIR 5
+#define WHITE_PAIR 6
+#define YELLOW_PAIR 7
 
-struct CAR {
+/*
+    Struktura z informacją o danych samochodu.
+*/
+struct CAR
+{
     int x;
     int y;
     int sleepTime;
@@ -26,6 +28,12 @@ struct CAR {
 
 std::list<CAR> CAR_INFO_LIST;
 
+bool ENDING = false;
+
+/*
+    Rysowanie poziomej ściany od punktu [startX, startY] o długości
+    width, złożony z znaku c. index oznacza kolor znaków.
+*/
 void horizontalWall(int startY, int startX, int width, char c[2], short index)
 {
     attron(COLOR_PAIR(index));
@@ -38,6 +46,10 @@ void horizontalWall(int startY, int startX, int width, char c[2], short index)
     attroff(COLOR_PAIR(index));
 }
 
+/*
+    Rysowanie pionowej ściany od punktu [startX, startY] o długości
+    height, złożony z znaku c. index oznacza kolor znaków.
+*/
 void verticalWall(int startY, int startX, int height, char c[2], short index)
 {
     attron(COLOR_PAIR(index));
@@ -50,6 +62,9 @@ void verticalWall(int startY, int startX, int height, char c[2], short index)
     attroff(COLOR_PAIR(index));
 }
 
+/*
+    Rysowanie zewnętrznej ściany dla toru 1
+*/
 void outerWallTrack1(int startY, int startX, int width, int height, char c[2], short index)
 {
     horizontalWall(startY, startX, 25, c, index);
@@ -61,21 +76,27 @@ void outerWallTrack1(int startY, int startX, int width, int height, char c[2], s
     horizontalWall(startY + height + 1, startX + 70, 30, c, index);
 }
 
+/*
+    Rysowanie wewnętrznej ściany dla toru 1
+*/
 void innerWallTrack1(int startY, int startX, int width, int height, char c[2], short index)
 {
-   horizontalWall(startY, startX, 6, c, index);
-   horizontalWall(startY, startX  + 13, 13, c, index);
-   horizontalWall(startY, startX  + 33, 29, c, index);
-   horizontalWall(startY, startX  + 70, 22, c, index);
-   verticalWall(startY, startX + width - 1, height, c, index);
-   horizontalWall(startY + height + 1, startX, 6, c, index);
-   horizontalWall(startY  + height + 1, startX  + 13, 13, c, index);
-   horizontalWall(startY  + height + 1, startX  + 33, 29, c, index);
-   horizontalWall(startY  + height + 1, startX  + 70, 22, c, index);
-   verticalWall(startY, startX + 5, height, c, index);
-   verticalWall(startY, startX + 13, height, c, index);
+    horizontalWall(startY, startX, 6, c, index);
+    horizontalWall(startY, startX + 13, 13, c, index);
+    horizontalWall(startY, startX + 33, 29, c, index);
+    horizontalWall(startY, startX + 70, 22, c, index);
+    verticalWall(startY, startX + width - 1, height, c, index);
+    horizontalWall(startY + height + 1, startX, 6, c, index);
+    horizontalWall(startY + height + 1, startX + 13, 13, c, index);
+    horizontalWall(startY + height + 1, startX + 33, 29, c, index);
+    horizontalWall(startY + height + 1, startX + 70, 22, c, index);
+    verticalWall(startY, startX + 5, height, c, index);
+    verticalWall(startY, startX + 13, height, c, index);
 }
 
+/*
+    Rysowanie ścian do toru 2
+*/
 void wallTrack2(int startY, int startX, int width, int height, char c[2], short index)
 {
     horizontalWall(startY, startX, width, c, index);
@@ -84,54 +105,74 @@ void wallTrack2(int startY, int startX, int width, int height, char c[2], short 
     horizontalWall(startY + height + 1, startX, width, c, index);
 }
 
+/*
+    Rysowanie toru nr 1
+*/
 void buildTrack1(int width, int height)
 {
     height -= 2;
     int startY = 10;
     int startX = 20;
 
-    outerWallTrack1(startY, startX, width, height, (char*)"@", BLUE_PAIR);
+    outerWallTrack1(startY, startX, width, height, (char *)"@", BLUE_PAIR);
 
     startY += 4;
     width -= 8;
     height -= 8;
-    innerWallTrack1(startY, startX, width, height, (char*)"@", BLUE_PAIR);
+    innerWallTrack1(startY, startX, width, height, (char *)"@", BLUE_PAIR);
 }
 
+/*
+    Rysowanie toru nr 2
+*/
 void buildTrack2(int width, int height)
 {
     height -= 2;
     int startY = 0;
     int startX = 45;
 
-    wallTrack2(startY, startX, width, height, (char*)"#", CYAN_PAIR);
+    wallTrack2(startY, startX, width, height, (char *)"#", CYAN_PAIR);
 
     startY += 4;
     startX += 8;
     width -= 16;
     height -= 8;
-    wallTrack2(startY, startX, width, height, (char*)"#", CYAN_PAIR);
+    wallTrack2(startY, startX, width, height, (char *)"#", CYAN_PAIR);
 }
 
+/*
+    Funkcja wykonywana przez wątek removeDeactivatedThread.
+    Co 1 sekundę przegląda i usuwa wszystkie nieaktywne już
+    struktury CAR w liście CAR_INFO_LIST.
+    Wątek kończy pracę, gdy został wysłany sygnał o kończeniu programu
+    (zmienna ENDING) oraz wszystkie samochody z listy CAR_INFO_LIST
+    zostaną usunięte.
+*/
 void removeDeactivated()
 {
-    while (true)
+    while (!ENDING || !CAR_INFO_LIST.empty())
     {
         sleep(1);
-        CAR_INFO_LIST.remove_if([](CAR c){ return !c.active; });
+        CAR_INFO_LIST.remove_if([](CAR c)
+                                { return !c.active; });
     }
 }
 
-void moveChar()
+/*
+    Funkcja wykonywana przez wątek printCarsThread.
+    Rysuje co 1ms samochody na ekranie.
+    Lista 'list' jest potrzebna do zamazywania pól, na których
+    poprzednio znajdowały się samochody.
+    Wątek kończy pracę, gdy został wysłany sygnał o kończeniu programu
+    (zmienna ENDING) oraz wszystkie samochody z listy CAR_INFO_LIST
+    zostaną usunięte.
+*/
+void printCars()
 {
     std::list<std::vector<int>> list;
-    while (true)
+    while (!ENDING || !CAR_INFO_LIST.empty())
     {
-        std::string s = std::to_string(CAR_INFO_LIST.size());
-        mvaddch(1, 2, ' ');
-        for (int i = 0; i < s.size(); i++)
-            mvaddch(1, 1 + i, s[i]);
-        while(!list.empty())
+        while (!list.empty())
         {
             std::vector<int> v = list.front();
             list.pop_front();
@@ -144,19 +185,25 @@ void moveChar()
             mvaddch(car.y, car.x, car.c);
             list.push_back({car.y, car.x});
             attroff(COLOR_PAIR(car.color));
-            
-            
+           
         }
         refresh();
-        
+
         usleep(1'000);
     }
     return;
 }
 
-void moveOuterCar(CAR* car)
+/*
+    Funkcja wykonywająca ruch samochodu po torze nr. 2
+*/
+void moveCarTrack2(CAR *car)
 {
-    while(true)
+    int startX = (*car).x;
+    int startY = (*car).y;
+    int lap = 0;
+
+    while (lap < 3)
     {
         usleep((*car).sleepTime);
         if ((*car).y > 2 && (*car).x == 49)
@@ -175,14 +222,24 @@ void moveOuterCar(CAR* car)
         {
             (*car).x = (*car).x - 1;
         }
+
+        if ((*car).y == startY && (*car).x == startX)
+        {
+            lap++;
+        }
     }
+    (*car).active = false;
+    // (*car).c = ' ';
 }
 
-void moveInnerCar(CAR* car)
+/*
+    Funkcja wykonywająca ruch samochodu po torze nr. 1
+*/
+void moveInnerCar(CAR *car)
 {
     int lap = 0;
 
-    while(true)
+    while (true)
     {
         usleep((*car).sleepTime);
         if ((*car).y == 12 && (*car).x == 29)
@@ -214,12 +271,9 @@ void moveInnerCar(CAR* car)
         {
             (*car).active = false;
             return;
-            
         }
-        
     }
 }
-
 
 int main(int argc, char const *argv[])
 {
@@ -228,9 +282,7 @@ int main(int argc, char const *argv[])
     std::uniform_int_distribution<> distSleep(50'000, 100'000);
     std::uniform_int_distribution<> distChar(66, 90);
     std::uniform_int_distribution<> distColor(3, 7);
-    std::uniform_int_distribution<> distFactorySleep(5, 10);
-
-    srand(time(NULL));
+    std::uniform_int_distribution<> distFactorySleep(2, 5);
 
     initscr();
     curs_set(0);
@@ -248,13 +300,17 @@ int main(int argc, char const *argv[])
     buildTrack2(46, 46);
     refresh();
 
-    std::thread t(moveChar);
-    std::thread garbageCollectorThread(removeDeactivated);
+    std::thread printCarsThread(printCars);
+    std::thread removeDeactivatedThread(removeDeactivated);
 
     std::list<std::thread> threadList;
 
     std::uniform_int_distribution<> distY(2, 43);
     std::uniform_int_distribution<> distX(49, 86);
+    /*
+        Tworzenie trzech wątków, które przedstawiają trzy
+        samochody jadące na torze nr. 2.
+    */
     for (int i = 0; i < 3; i++)
     {
         int y = distY(gen);
@@ -269,13 +325,16 @@ int main(int argc, char const *argv[])
         }
 
         CAR_INFO_LIST.push_back({x, y, 60'000, (char)distChar(gen), distColor(gen)});
-        threadList.push_back(std::thread(moveOuterCar, &(CAR_INFO_LIST.back())));
+        threadList.push_back(std::thread(moveCarTrack2, &(CAR_INFO_LIST.back())));
     }
-
-    while (true)
+    /*
+        Tworzenie dziesięciu wątków, które przedstawiają dziesięć
+        samochodów jadących na torze nr. 1.
+    */
+    for (int i = 0; i < 10; i++)
     {
         int randomSleepTime = distSleep(gen);
-        char randomChar = (char) distChar(gen);
+        char randomChar = (char)distChar(gen);
         int randomColor = distColor(gen);
 
         CAR_INFO_LIST.push_back({20, 12, randomSleepTime, randomChar, randomColor});
@@ -283,8 +342,15 @@ int main(int argc, char const *argv[])
 
         sleep(distFactorySleep(gen));
     }
-    t.join();
-    garbageCollectorThread.join();
+    ENDING = true;
+
+    while (!threadList.empty())
+    {
+        threadList.front().join();
+        threadList.pop_front();
+    }
+    removeDeactivatedThread.join();
+    printCarsThread.join();
     endwin();
 
     return 0;
