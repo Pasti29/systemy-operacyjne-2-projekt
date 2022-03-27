@@ -4,6 +4,8 @@
 #include <vector>
 #include <thread>
 #include <random>
+#include <algorithm>
+#include <iostream>
 
 #define BLUE_PAIR 1
 #define CYAN_PAIR 2
@@ -141,24 +143,6 @@ void buildTrack2(int width, int height)
 }
 
 /*
-    Funkcja wykonywana przez wątek removeDeactivatedThread.
-    Co 1 sekundę przegląda i usuwa wszystkie nieaktywne już
-    struktury CAR w liście CAR_INFO_LIST.
-    Wątek kończy pracę, gdy został wysłany sygnał o kończeniu programu
-    (zmienna ENDING) oraz wszystkie samochody z listy CAR_INFO_LIST
-    zostaną usunięte.
-*/
-void removeDeactivated()
-{
-    while (!ENDING || !CAR_INFO_LIST.empty())
-    {
-        sleep(1);
-        CAR_INFO_LIST.remove_if([](CAR c)
-                                { return !c.active; });
-    }
-}
-
-/*
     Funkcja wykonywana przez wątek printCarsThread.
     Rysuje co 1ms samochody na ekranie.
     Lista 'list' jest potrzebna do zamazywania pól, na których
@@ -170,26 +154,36 @@ void removeDeactivated()
 void printCars()
 {
     std::list<std::vector<int>> list;
-    while (!ENDING || !CAR_INFO_LIST.empty())
+    nodelay(stdscr, TRUE);
+    int ch;
+
+    while (true)
     {
-        while (!list.empty())
+        if ((ch = getch()) == ERR)
         {
-            std::vector<int> v = list.front();
-            list.pop_front();
-            mvaddch(v[0], v[1], ' ');
-        }
+            while (!list.empty())
+            {
+                std::vector<int> v = list.front();
+                list.pop_front();
+                mvaddch(v[0], v[1], ' ');
+            }
 
-        for (CAR car : CAR_INFO_LIST)
+            for (CAR car : CAR_INFO_LIST)
+            {
+                attron(COLOR_PAIR(car.color));
+                mvaddch(car.y, car.x, car.c);
+                list.push_back({car.y, car.x});
+                attroff(COLOR_PAIR(car.color));
+            }
+            refresh();
+
+            usleep(1'000);
+        }
+        else if (ch == 'q')
         {
-            attron(COLOR_PAIR(car.color));
-            mvaddch(car.y, car.x, car.c);
-            list.push_back({car.y, car.x});
-            attroff(COLOR_PAIR(car.color));
-           
+            ENDING = true;
+            return;
         }
-        refresh();
-
-        usleep(1'000);
     }
     return;
 }
@@ -203,7 +197,7 @@ void moveCarTrack2(CAR *car)
     int startY = (*car).y;
     int lap = 0;
 
-    while (lap < 3)
+    while (!ENDING)
     {
         usleep((*car).sleepTime);
         if ((*car).y > 2 && (*car).x == 49)
@@ -222,14 +216,8 @@ void moveCarTrack2(CAR *car)
         {
             (*car).x = (*car).x - 1;
         }
-
-        if ((*car).y == startY && (*car).x == startX)
-        {
-            lap++;
-        }
     }
-    (*car).active = false;
-    // (*car).c = ' ';
+    return;
 }
 
 /*
@@ -239,7 +227,7 @@ void moveInnerCar(CAR *car)
 {
     int lap = 0;
 
-    while (true)
+    while (!ENDING)
     {
         usleep((*car).sleepTime);
         if ((*car).y == 12 && (*car).x == 29)
@@ -269,10 +257,10 @@ void moveInnerCar(CAR *car)
         }
         else
         {
-            (*car).active = false;
             return;
         }
     }
+    return;
 }
 
 int main(int argc, char const *argv[])
@@ -301,7 +289,6 @@ int main(int argc, char const *argv[])
     refresh();
 
     std::thread printCarsThread(printCars);
-    std::thread removeDeactivatedThread(removeDeactivated);
 
     std::list<std::thread> threadList;
 
@@ -323,34 +310,35 @@ int main(int argc, char const *argv[])
             else
                 x = 86;
         }
-
+        // std::thread t(moveCarTrack2, &(CAR_INFO_LIST.back()));
         CAR_INFO_LIST.push_back({x, y, 60'000, (char)distChar(gen), distColor(gen)});
-        threadList.push_back(std::thread(moveCarTrack2, &(CAR_INFO_LIST.back())));
+        threadList.push_back(std::move(std::thread(moveCarTrack2, &(CAR_INFO_LIST.back()))));
     }
     /*
         Tworzenie dziesięciu wątków, które przedstawiają dziesięć
         samochodów jadących na torze nr. 1.
     */
-    for (int i = 0; i < 10; i++)
+
+    while (!ENDING)
     {
         int randomSleepTime = distSleep(gen);
         char randomChar = (char)distChar(gen);
         int randomColor = distColor(gen);
 
         CAR_INFO_LIST.push_back({20, 12, randomSleepTime, randomChar, randomColor});
-        threadList.push_back(std::thread(moveInnerCar, &(CAR_INFO_LIST.back())));
+        threadList.push_back(std::move(std::thread(moveInnerCar, &(CAR_INFO_LIST.back()))));
 
         sleep(distFactorySleep(gen));
     }
-    ENDING = true;
+
+    printCarsThread.join();
 
     while (!threadList.empty())
     {
         threadList.front().join();
         threadList.pop_front();
     }
-    removeDeactivatedThread.join();
-    printCarsThread.join();
+    
     endwin();
 
     return 0;
