@@ -270,7 +270,7 @@ int main(int argc, char const *argv[])
     std::uniform_int_distribution<> distSleep(50'000, 100'000);
     std::uniform_int_distribution<> distChar(66, 90);
     std::uniform_int_distribution<> distColor(3, 7);
-    std::uniform_int_distribution<> distFactorySleep(2, 5);
+    std::uniform_int_distribution<> distFactorySleep(4, 8);
 
     initscr();
     curs_set(0);
@@ -310,7 +310,6 @@ int main(int argc, char const *argv[])
             else
                 x = 86;
         }
-        // std::thread t(moveCarTrack2, &(CAR_INFO_LIST.back()));
         CAR_INFO_LIST.push_back({x, y, 60'000, (char)distChar(gen), distColor(gen)});
         threadList.push_back(std::move(std::thread(moveCarTrack2, &(CAR_INFO_LIST.back()))));
     }
