@@ -6,6 +6,7 @@
 #include <random>
 #include <algorithm>
 #include <iostream>
+#include <mutex>
 
 #define BLUE_PAIR 1
 #define CYAN_PAIR 2
@@ -14,6 +15,19 @@
 #define RED_PAIR 5
 #define WHITE_PAIR 6
 #define YELLOW_PAIR 7
+
+std::mutex m1;
+std::mutex m2;
+std::mutex m3;
+std::mutex m4;
+
+/*
+    Etap II
+    Utworzyć czekanie na skrzyżowaniu.
+    Jeżeli samochód jest na skrzyżowaniu, to inne samochody, które chcą wjechać
+    na to skrzyżowanie, muszą zaczekać. Jak już samochód wyjedzie ze skrzyżowania, to
+    jeden samochód może przejechać i jak ten przejedzie, to wtedy mogą inne przejechać.
+*/
 
 /*
     Struktura z informacją o danych samochodu.
@@ -153,12 +167,13 @@ void buildTrack2(int width, int height)
 */
 void printCars()
 {
+    // mvaddch(35, 90, '#');
     std::list<std::vector<int>> list;
     nodelay(stdscr, TRUE);
     int ch;
-
     while (true)
     {
+        
         if ((ch = getch()) == ERR)
         {
             while (!list.empty())
@@ -188,33 +203,124 @@ void printCars()
     return;
 }
 
+void moveThroughtCrossing1(CAR *car) {
+    m1.lock();
+    if ((*car).y == 14) {
+        for (int i = 0; i < 5; i++) {
+            (*car).y--;
+            if (i < 4)
+                usleep((*car).sleepTime);
+        }
+    } else {
+        for (int i = 0; i < 10; i++) {
+            (*car).x++;
+            if (i < 9)
+                usleep((*car).sleepTime);
+        }
+    }
+    m1.unlock();
+}
+
+void moveThroughtCrossing2(CAR *car) {
+    m2.lock();
+    if ((*car).y == 10) {
+        for (int i = 0; i < 5; i++) {
+            (*car).y++;
+            if (i < 4)
+                usleep((*car).sleepTime);
+        }
+    } else {
+        for (int i = 0; i < 10; i++) {
+            (*car).x++;
+            if (i < 9)
+                usleep((*car).sleepTime);
+        }
+    }
+    m2.unlock();
+}
+
+void moveThroughtCrossing3(CAR *car) {
+    m3.lock();
+    if ((*car).y == 33) {
+        for (int i = 0; i < 5; i++) {
+            (*car).y++;
+            if (i < 4)
+                usleep((*car).sleepTime);
+        }
+    } else {
+        for (int i = 0; i < 10; i++) {
+            (*car).x--;
+            if (i < 9)
+                usleep((*car).sleepTime);
+        }
+    }
+    m3.unlock();
+}
+
+void moveThroughtCrossing4(CAR *car) {
+    m4.lock();
+    if ((*car).y == 37) {
+        for (int i = 0; i < 5; i++) {
+            (*car).y--;
+            if (i < 4)
+                usleep((*car).sleepTime);
+        }
+    } else {
+        for (int i = 0; i < 10; i++) {
+            (*car).x--;
+            if (i < 9)
+                usleep((*car).sleepTime);
+        }
+    }
+    m4.unlock();
+}
+
 /*
     Funkcja wykonywająca ruch samochodu po torze nr. 2
 */
-void moveCarTrack2(CAR *car)
+void moveInnerCar(CAR *car)
 {
     int startX = (*car).x;
     int startY = (*car).y;
-    int lap = 0;
 
     while (!ENDING)
     {
         usleep((*car).sleepTime);
         if ((*car).y > 2 && (*car).x == 49)
         {
-            (*car).y = (*car).y - 1;
+            switch ((*car).y) {
+            case 14:
+                moveThroughtCrossing1(car);
+                break;
+            case 37:
+                moveThroughtCrossing4(car);
+                break;
+            default:
+                (*car).y--;
+                break;
+            }
         }
         else if ((*car).y == 2 && (*car).x < 86)
         {
-            (*car).x = (*car).x + 1;
+            (*car).x++;
         }
         else if ((*car).y < 43 && (*car).x == 86)
         {
-            (*car).y = (*car).y + 1;
+            switch ((*car).y) {
+            case 10:
+                moveThroughtCrossing2(car);
+                break;
+            case 33:
+                moveThroughtCrossing3(car);
+                break;
+            default:
+                (*car).y++;
+                break;
+            }
         }
         else if ((*car).y == 43 && (*car).x > 49)
         {
-            (*car).x = (*car).x - 1;
+            (*car).x--;
         }
     }
     return;
@@ -223,7 +329,7 @@ void moveCarTrack2(CAR *car)
 /*
     Funkcja wykonywająca ruch samochodu po torze nr. 1
 */
-void moveInnerCar(CAR *car)
+void moveOuterCar(CAR *car)
 {
     int lap = 0;
 
@@ -237,7 +343,17 @@ void moveInnerCar(CAR *car)
 
         if ((*car).y == 35 && (*car).x > 29)
         {
-            (*car).x--;
+            switch ((*car).x) {
+            case 90:
+                moveThroughtCrossing3(car);
+                break;
+            case 53:
+                moveThroughtCrossing4(car);
+                break;
+            default:
+                (*car).x--;
+                break;
+            }
         }
         else if ((*car).y < 35 && (*car).x == 115)
         {
@@ -245,7 +361,17 @@ void moveInnerCar(CAR *car)
         }
         else if ((*car).y == 12 && (*car).x < 115)
         {
-            (*car).x++;
+            switch ((*car).x) {
+            case 45:
+                moveThroughtCrossing1(car);
+                break;
+            case 82:
+                moveThroughtCrossing2(car);
+                break;
+            default:
+                (*car).x++;
+                break;
+            }
         }
         else if (lap < 3)
         {
@@ -267,14 +393,15 @@ int main(int argc, char const *argv[])
 {
     std::random_device rd;
     std::mt19937 gen(rd());
-    std::uniform_int_distribution<> distSleep(50'000, 100'000);
+    std::uniform_int_distribution<> distSleep(150'000, 200'000);
     std::uniform_int_distribution<> distChar(66, 90);
     std::uniform_int_distribution<> distColor(3, 7);
-    std::uniform_int_distribution<> distFactorySleep(4, 8);
+    std::uniform_int_distribution<> distFactorySleep(3, 5);
 
     initscr();
     curs_set(0);
     start_color();
+    noecho();
 
     init_pair(BLUE_PAIR, COLOR_BLUE, COLOR_BLACK);
     init_pair(CYAN_PAIR, COLOR_CYAN, COLOR_BLACK);
@@ -296,7 +423,7 @@ int main(int argc, char const *argv[])
     std::uniform_int_distribution<> distX(49, 86);
     /*
         Tworzenie trzech wątków, które przedstawiają trzy
-        samochody jadące na torze nr. 2.
+        samochody jadące po wewnętrznym torze.
     */
     for (int i = 0; i < 3; i++)
     {
@@ -310,12 +437,12 @@ int main(int argc, char const *argv[])
             else
                 x = 86;
         }
-        CAR_INFO_LIST.push_back({x, y, 60'000, (char)distChar(gen), distColor(gen)});
-        threadList.push_back(std::move(std::thread(moveCarTrack2, &(CAR_INFO_LIST.back()))));
+        CAR_INFO_LIST.push_back({x, y, 160'000, (char)distChar(gen), distColor(gen)});
+        threadList.push_back(std::move(std::thread(moveInnerCar, &(CAR_INFO_LIST.back()))));
     }
     /*
         Tworzenie dziesięciu wątków, które przedstawiają dziesięć
-        samochodów jadących na torze nr. 1.
+        samochodów jadących po zewnętrznym torze.
     */
 
     while (!ENDING)
@@ -325,7 +452,7 @@ int main(int argc, char const *argv[])
         int randomColor = distColor(gen);
 
         CAR_INFO_LIST.push_back({20, 12, randomSleepTime, randomChar, randomColor});
-        threadList.push_back(std::move(std::thread(moveInnerCar, &(CAR_INFO_LIST.back()))));
+        threadList.push_back(std::move(std::thread(moveOuterCar, &(CAR_INFO_LIST.back()))));
 
         sleep(distFactorySleep(gen));
     }
