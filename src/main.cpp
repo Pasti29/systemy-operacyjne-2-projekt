@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <iostream>
 #include <mutex>
+#include "track1.h"
 
 #define BLUE_PAIR 1
 #define CYAN_PAIR 2
@@ -410,7 +411,10 @@ int main(int argc, char const *argv[])
     init_pair(WHITE_PAIR, COLOR_WHITE, COLOR_BLACK);
     init_pair(YELLOW_PAIR, COLOR_YELLOW, COLOR_BLACK);
 
-    buildTrack1(100, 28);
+    Track1 track1 = Track1(100, 28);
+
+    track1.print();
+    // buildTrack1(100, 28);
     buildTrack2(46, 46);
     refresh();
 
