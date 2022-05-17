@@ -167,7 +167,6 @@ void buildTrack2(int width, int height)
 */
 void printCars()
 {
-    // mvaddch(35, 90, '#');
     std::list<std::vector<int>> list;
     nodelay(stdscr, TRUE);
     int ch;
@@ -276,7 +275,7 @@ void moveThroughtCrossing4(CAR *car) {
 }
 
 /*
-    Funkcja wykonywająca ruch samochodu po torze nr. 2
+    Funkcja wykonywająca ruch samochodu po wewnętrznym torze
 */
 void moveInnerCar(CAR *car)
 {
@@ -327,7 +326,7 @@ void moveInnerCar(CAR *car)
 }
 
 /*
-    Funkcja wykonywająca ruch samochodu po torze nr. 1
+    Funkcja wykonywająca ruch samochodu po zewnętrznym torze
 */
 void moveOuterCar(CAR *car)
 {
