@@ -11,18 +11,20 @@
 #include "track1.h"
 #include "track2.h"
 
-#define BLUE_PAIR 1
-#define CYAN_PAIR 2
-#define GREEN_PAIR 3
-#define MAGENTA_PAIR 4
-#define RED_PAIR 5
-#define WHITE_PAIR 6
-#define YELLOW_PAIR 7
+#define BLUE_PAIR       1
+#define CYAN_PAIR       2
+#define GREEN_PAIR      3
+#define MAGENTA_PAIR    4
+#define RED_PAIR        5
+#define WHITE_PAIR      6
+#define YELLOW_PAIR     7
 
-std::mutex m1;
-std::mutex m2;
-std::mutex m3;
-std::mutex m4;
+#define UP      1
+#define RIGHT   2
+#define DOWN    3
+#define LEFT    4
+
+std::mutex MUTEXES[4];
 
 /*
     Etap II
@@ -95,76 +97,35 @@ void printCars()
     return;
 }
 
-void moveThroughCrossing1(CAR *car) {
-    m1.lock();
-    if ((*car).y == 14) {
+void moveThroughCrossing(CAR *car, short direction, short mutexNumber) {
+    MUTEXES[mutexNumber].lock();
+    switch (direction) {
+    case UP: case DOWN:
         for (int i = 0; i < 5; i++) {
-            (*car).y--;
+            if (direction == UP) {
+                (*car).y--;
+            } else {
+                (*car).y++;
+            }
             if (i < 4)
                 usleep((*car).sleepTime);
         }
-    } else {
+        break;
+    case RIGHT: case LEFT:
         for (int i = 0; i < 10; i++) {
-            (*car).x++;
+            if (direction == RIGHT) {
+                (*car).x++;
+            } else {
+                (*car).x--;
+            }
             if (i < 9)
                 usleep((*car).sleepTime);
         }
+        break;
+    default:
+        break;
     }
-    m1.unlock();
-}
-
-void moveThroughCrossing2(CAR *car) {
-    m2.lock();
-    if ((*car).y == 10) {
-        for (int i = 0; i < 5; i++) {
-            (*car).y++;
-            if (i < 4)
-                usleep((*car).sleepTime);
-        }
-    } else {
-        for (int i = 0; i < 10; i++) {
-            (*car).x++;
-            if (i < 9)
-                usleep((*car).sleepTime);
-        }
-    }
-    m2.unlock();
-}
-
-void moveThroughCrossing3(CAR *car) {
-    m3.lock();
-    if ((*car).y == 33) {
-        for (int i = 0; i < 5; i++) {
-            (*car).y++;
-            if (i < 4)
-                usleep((*car).sleepTime);
-        }
-    } else {
-        for (int i = 0; i < 10; i++) {
-            (*car).x--;
-            if (i < 9)
-                usleep((*car).sleepTime);
-        }
-    }
-    m3.unlock();
-}
-
-void moveThroughCrossing4(CAR *car) {
-    m4.lock();
-    if ((*car).y == 37) {
-        for (int i = 0; i < 5; i++) {
-            (*car).y--;
-            if (i < 4)
-                usleep((*car).sleepTime);
-        }
-    } else {
-        for (int i = 0; i < 10; i++) {
-            (*car).x--;
-            if (i < 9)
-                usleep((*car).sleepTime);
-        }
-    }
-    m4.unlock();
+    MUTEXES[mutexNumber].unlock();
 }
 
 /*
@@ -182,10 +143,10 @@ void moveInnerCar(CAR *car)
         {
             switch ((*car).y) {
             case 14:
-                moveThroughCrossing1(car);
+                moveThroughCrossing(car, UP, 0);
                 break;
             case 37:
-                moveThroughCrossing4(car);
+                moveThroughCrossing(car, UP, 3);
                 break;
             default:
                 (*car).y--;
@@ -200,10 +161,10 @@ void moveInnerCar(CAR *car)
         {
             switch ((*car).y) {
             case 10:
-                moveThroughCrossing2(car);
+                moveThroughCrossing(car, DOWN, 1);
                 break;
             case 33:
-                moveThroughCrossing3(car);
+                moveThroughCrossing(car, DOWN, 2);
                 break;
             default:
                 (*car).y++;
@@ -237,10 +198,10 @@ void moveOuterCar(CAR *car)
         {
             switch ((*car).x) {
             case 90:
-                moveThroughCrossing3(car);
+                moveThroughCrossing(car, LEFT, 2);
                 break;
             case 53:
-                moveThroughCrossing4(car);
+                moveThroughCrossing(car, LEFT, 3);
                 break;
             default:
                 (*car).x--;
@@ -255,10 +216,10 @@ void moveOuterCar(CAR *car)
         {
             switch ((*car).x) {
             case 45:
-                moveThroughCrossing1(car);
+                moveThroughCrossing(car, RIGHT, 0);
                 break;
             case 82:
-                moveThroughCrossing2(car);
+                moveThroughCrossing(car, RIGHT, 1);
                 break;
             default:
                 (*car).x++;
