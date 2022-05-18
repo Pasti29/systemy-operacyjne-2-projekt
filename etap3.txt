@@ -1,0 +1,2 @@
+Na skrzyżowaniu, pierwszy samochód, który czeka,
+jako pierwszy może przejechać, gdy zwolni się skrzyżowanie.
