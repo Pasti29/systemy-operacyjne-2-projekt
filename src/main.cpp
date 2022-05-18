@@ -7,7 +7,9 @@
 #include <algorithm>
 #include <iostream>
 #include <mutex>
+
 #include "track1.h"
+#include "track2.h"
 
 #define BLUE_PAIR 1
 #define CYAN_PAIR 2
@@ -46,116 +48,6 @@ struct CAR
 std::list<CAR> CAR_INFO_LIST;
 
 bool ENDING = false;
-
-/*
-    Rysowanie poziomej ściany od punktu [startX, startY] o długości
-    width, złożony z znaku c. index oznacza kolor znaków.
-*/
-void horizontalWall(int startY, int startX, int width, char c[2], short index)
-{
-    attron(COLOR_PAIR(index));
-    move(startY, startX);
-    for (int i = 0; i < width; i++)
-    {
-        printw(c);
-        startX++;
-    }
-    attroff(COLOR_PAIR(index));
-}
-
-/*
-    Rysowanie pionowej ściany od punktu [startX, startY] o długości
-    height, złożony z znaku c. index oznacza kolor znaków.
-*/
-void verticalWall(int startY, int startX, int height, char c[2], short index)
-{
-    attron(COLOR_PAIR(index));
-    for (int i = 0; i < height; i++)
-    {
-        startY++;
-        move(startY, startX);
-        printw(c);
-    }
-    attroff(COLOR_PAIR(index));
-}
-
-/*
-    Rysowanie zewnętrznej ściany dla toru 1
-*/
-void outerWallTrack1(int startY, int startX, int width, int height, char c[2], short index)
-{
-    horizontalWall(startY, startX, 25, c, index);
-    horizontalWall(startY, startX + 34, 29, c, index);
-    horizontalWall(startY, startX + 70, 30, c, index);
-    verticalWall(startY, startX + width - 1, height, c, index);
-    horizontalWall(startY + height + 1, startX, 25, c, index);
-    horizontalWall(startY + height + 1, startX + 34, 29, c, index);
-    horizontalWall(startY + height + 1, startX + 70, 30, c, index);
-}
-
-/*
-    Rysowanie wewnętrznej ściany dla toru 1
-*/
-void innerWallTrack1(int startY, int startX, int width, int height, char c[2], short index)
-{
-    horizontalWall(startY, startX, 6, c, index);
-    horizontalWall(startY, startX + 13, 13, c, index);
-    horizontalWall(startY, startX + 33, 29, c, index);
-    horizontalWall(startY, startX + 70, 22, c, index);
-    verticalWall(startY, startX + width - 1, height, c, index);
-    horizontalWall(startY + height + 1, startX, 6, c, index);
-    horizontalWall(startY + height + 1, startX + 13, 13, c, index);
-    horizontalWall(startY + height + 1, startX + 33, 29, c, index);
-    horizontalWall(startY + height + 1, startX + 70, 22, c, index);
-    verticalWall(startY, startX + 5, height, c, index);
-    verticalWall(startY, startX + 13, height, c, index);
-}
-
-/*
-    Rysowanie ścian do toru 2
-*/
-void wallTrack2(int startY, int startX, int width, int height, char c[2], short index)
-{
-    horizontalWall(startY, startX, width, c, index);
-    verticalWall(startY, startX + width - 1, height, c, index);
-    verticalWall(startY, startX, height, c, index);
-    horizontalWall(startY + height + 1, startX, width, c, index);
-}
-
-/*
-    Rysowanie toru nr 1
-*/
-void buildTrack1(int width, int height)
-{
-    height -= 2;
-    int startY = 10;
-    int startX = 20;
-
-    outerWallTrack1(startY, startX, width, height, (char *)"@", BLUE_PAIR);
-
-    startY += 4;
-    width -= 8;
-    height -= 8;
-    innerWallTrack1(startY, startX, width, height, (char *)"@", BLUE_PAIR);
-}
-
-/*
-    Rysowanie toru nr 2
-*/
-void buildTrack2(int width, int height)
-{
-    height -= 2;
-    int startY = 0;
-    int startX = 45;
-
-    wallTrack2(startY, startX, width, height, (char *)"#", CYAN_PAIR);
-
-    startY += 4;
-    startX += 8;
-    width -= 16;
-    height -= 8;
-    wallTrack2(startY, startX, width, height, (char *)"#", CYAN_PAIR);
-}
 
 /*
     Funkcja wykonywana przez wątek printCarsThread.
@@ -203,7 +95,7 @@ void printCars()
     return;
 }
 
-void moveThroughtCrossing1(CAR *car) {
+void moveThroughCrossing1(CAR *car) {
     m1.lock();
     if ((*car).y == 14) {
         for (int i = 0; i < 5; i++) {
@@ -221,7 +113,7 @@ void moveThroughtCrossing1(CAR *car) {
     m1.unlock();
 }
 
-void moveThroughtCrossing2(CAR *car) {
+void moveThroughCrossing2(CAR *car) {
     m2.lock();
     if ((*car).y == 10) {
         for (int i = 0; i < 5; i++) {
@@ -239,7 +131,7 @@ void moveThroughtCrossing2(CAR *car) {
     m2.unlock();
 }
 
-void moveThroughtCrossing3(CAR *car) {
+void moveThroughCrossing3(CAR *car) {
     m3.lock();
     if ((*car).y == 33) {
         for (int i = 0; i < 5; i++) {
@@ -257,7 +149,7 @@ void moveThroughtCrossing3(CAR *car) {
     m3.unlock();
 }
 
-void moveThroughtCrossing4(CAR *car) {
+void moveThroughCrossing4(CAR *car) {
     m4.lock();
     if ((*car).y == 37) {
         for (int i = 0; i < 5; i++) {
@@ -290,10 +182,10 @@ void moveInnerCar(CAR *car)
         {
             switch ((*car).y) {
             case 14:
-                moveThroughtCrossing1(car);
+                moveThroughCrossing1(car);
                 break;
             case 37:
-                moveThroughtCrossing4(car);
+                moveThroughCrossing4(car);
                 break;
             default:
                 (*car).y--;
@@ -308,10 +200,10 @@ void moveInnerCar(CAR *car)
         {
             switch ((*car).y) {
             case 10:
-                moveThroughtCrossing2(car);
+                moveThroughCrossing2(car);
                 break;
             case 33:
-                moveThroughtCrossing3(car);
+                moveThroughCrossing3(car);
                 break;
             default:
                 (*car).y++;
@@ -345,10 +237,10 @@ void moveOuterCar(CAR *car)
         {
             switch ((*car).x) {
             case 90:
-                moveThroughtCrossing3(car);
+                moveThroughCrossing3(car);
                 break;
             case 53:
-                moveThroughtCrossing4(car);
+                moveThroughCrossing4(car);
                 break;
             default:
                 (*car).x--;
@@ -363,10 +255,10 @@ void moveOuterCar(CAR *car)
         {
             switch ((*car).x) {
             case 45:
-                moveThroughtCrossing1(car);
+                moveThroughCrossing1(car);
                 break;
             case 82:
-                moveThroughtCrossing2(car);
+                moveThroughCrossing2(car);
                 break;
             default:
                 (*car).x++;
@@ -411,11 +303,11 @@ int main(int argc, char const *argv[])
     init_pair(WHITE_PAIR, COLOR_WHITE, COLOR_BLACK);
     init_pair(YELLOW_PAIR, COLOR_YELLOW, COLOR_BLACK);
 
-    Track1 track1 = Track1(100, 28);
+    Track1 track1 = Track1(100, 28, '@', BLUE_PAIR);
+    Track2 track2 = Track2(46, 46, '#', CYAN_PAIR);
 
     track1.print();
-    // buildTrack1(100, 28);
-    buildTrack2(46, 46);
+    track2.print();
     refresh();
 
     std::thread printCarsThread(printCars);
