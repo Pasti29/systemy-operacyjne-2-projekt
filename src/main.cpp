@@ -285,10 +285,10 @@ int main(int argc, char const *argv[])
 {
     std::random_device rd;
     std::mt19937 gen(rd());
-    std::uniform_int_distribution<> distSleep(150'000, 200'000);
+    std::uniform_int_distribution<> distSleep(50'000, 100'000);
     std::uniform_int_distribution<> distChar(66, 90);
     std::uniform_int_distribution<> distColor(3, 7);
-    std::uniform_int_distribution<> distFactorySleep(3, 5);
+    std::uniform_int_distribution<> distFactorySleep(3, 8);
 
     initscr();
     curs_set(0);
@@ -332,7 +332,7 @@ int main(int argc, char const *argv[])
             else
                 x = 86;
         }
-        CAR_INFO_LIST.push_back({x, y, 160'000, (char)distChar(gen), distColor(gen)});
+        CAR_INFO_LIST.push_back({x, y, 60'000, (char)distChar(gen), distColor(gen)});
         threadList.push_back(std::move(std::thread(moveInnerCar, &(CAR_INFO_LIST.back()))));
     }
     /*
