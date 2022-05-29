@@ -137,71 +137,38 @@ void moveThroughCrossing(CAR *car, short direction, short mutexNumber) {
     // MUTEXES[mutexNumber].unlock();
 }
 
-void threadHandleCrossroad1(short crossroadNumber) {
-
-    while (true) {
-        if (ENDING) return;
-
-        if (CROSSROAD_WAITING_LIST_1.empty()) usleep(10000);
-
-        while (!CROSSROAD_WAITING_LIST_1.empty()) {
-            MUTEXES[crossroadNumber].lock();
-            auto car  = CROSSROAD_WAITING_LIST_1.front();
-            CROSSROAD_WAITING_LIST_1.pop_front();
-            MUTEXES[crossroadNumber].unlock();
-            moveThroughCrossing(car, (*car).direction, crossroadNumber);
-        }
+void threadHandleCrossroad(short crossroadNumber) {
+    std::list<CAR*>* wl;
+    switch (crossroadNumber)
+    {
+    case 0:
+        wl = &CROSSROAD_WAITING_LIST_1;
+        break;
+    case 1:
+        wl = &CROSSROAD_WAITING_LIST_2;
+        break;
+    case 2:
+        wl = &CROSSROAD_WAITING_LIST_3;
+        break;
+    case 3:
+        wl = &CROSSROAD_WAITING_LIST_4;
+        break;
+    default:
+        break;
     }
-}
-
-void threadHandleCrossroad2(short crossroadNumber) {
 
     while (true) {
         if (ENDING) return;
 
-        if (CROSSROAD_WAITING_LIST_2.empty()) usleep(10000);
-
-        while (!CROSSROAD_WAITING_LIST_2.empty()) {
+        while (!(*wl).empty()) {
             MUTEXES[crossroadNumber].lock();
-            auto car  = CROSSROAD_WAITING_LIST_2.front();
-            CROSSROAD_WAITING_LIST_2.pop_front();
+            auto car  = (*wl).front();
+            (*wl).pop_front();
             MUTEXES[crossroadNumber].unlock();
             moveThroughCrossing(car, (*car).direction, crossroadNumber);
         }
-    }
-}
 
-void threadHandleCrossroad3(short crossroadNumber) {
-
-    while (true) {
-        if (ENDING) return;
-
-        if (CROSSROAD_WAITING_LIST_3.empty()) usleep(10000);
-
-        while (!CROSSROAD_WAITING_LIST_3.empty()) {
-            MUTEXES[crossroadNumber].lock();
-            auto car  = CROSSROAD_WAITING_LIST_3.front();
-            CROSSROAD_WAITING_LIST_3.pop_front();
-            MUTEXES[crossroadNumber].unlock();
-            moveThroughCrossing(car, (*car).direction, crossroadNumber);
-        }
-    }
-}
-
-void threadHandleCrossroad4(short crossroadNumber) {
-
-    while (true) {
-        if (ENDING) return;
-
-        if (CROSSROAD_WAITING_LIST_4.empty()) usleep(10000);
-
-        while (!CROSSROAD_WAITING_LIST_4.empty()) {
-            MUTEXES[crossroadNumber].lock();
-            auto car  = CROSSROAD_WAITING_LIST_4.front();
-            CROSSROAD_WAITING_LIST_4.pop_front();
-            MUTEXES[crossroadNumber].unlock();
-            moveThroughCrossing(car, (*car).direction, crossroadNumber);
-        }
+        if ((*wl).empty()) usleep(10000);
     }
 }
 
@@ -382,10 +349,10 @@ int main(int argc, char const *argv[])
 
     std::thread printCarsThread(printCars);
 
-    std::thread crossroad1(threadHandleCrossroad1, 0);
-    std::thread crossroad2(threadHandleCrossroad2, 1);
-    std::thread crossroad3(threadHandleCrossroad3, 2);
-    std::thread crossroad4(threadHandleCrossroad4, 3);
+    std::thread crossroad1(threadHandleCrossroad, 0);
+    std::thread crossroad2(threadHandleCrossroad, 1);
+    std::thread crossroad3(threadHandleCrossroad, 2);
+    std::thread crossroad4(threadHandleCrossroad, 3);
 
     std::list<std::thread> threadList;
 
