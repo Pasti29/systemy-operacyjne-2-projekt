@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <iostream>
 #include <mutex>
+#include <condition_variable>
 
 #include "track1.h"
 #include "track2.h"
@@ -24,8 +25,6 @@
 #define DOWN    3
 #define LEFT    4
 
-std::mutex MUTEXES[4];
-
 /*
     Etap II
     Utworzyć czekanie na skrzyżowaniu.
@@ -33,6 +32,8 @@ std::mutex MUTEXES[4];
     na to skrzyżowanie, muszą zaczekać. Jak już samochód wyjedzie ze skrzyżowania, to
     jeden samochód może przejechać i jak ten przejedzie, to wtedy mogą inne przejechać.
 */
+
+std::mutex MUTEXES[4];
 
 /*
     Struktura z informacją o danych samochodu.
@@ -44,11 +45,17 @@ struct CAR
     int sleepTime;
     char c;
     int color;
+    int direction;
     bool active = true;
     bool blocked = false;
 };
 
 std::list<CAR> CAR_INFO_LIST;
+std::list<CAR*> CROSSROAD_WAITING_LIST_1;
+std::list<CAR*> CROSSROAD_WAITING_LIST_2;
+std::list<CAR*> CROSSROAD_WAITING_LIST_3;
+std::list<CAR*> CROSSROAD_WAITING_LIST_4;
+
 
 bool ENDING = false;
 
@@ -99,7 +106,7 @@ void printCars()
 }
 
 void moveThroughCrossing(CAR *car, short direction, short mutexNumber) {
-    MUTEXES[mutexNumber].lock();
+    // MUTEXES[mutexNumber].lock();
     switch (direction) {
     case UP: case DOWN:
         for (int i = 0; i < 5; i++) {
@@ -126,7 +133,83 @@ void moveThroughCrossing(CAR *car, short direction, short mutexNumber) {
     default:
         break;
     }
-    MUTEXES[mutexNumber].unlock();
+    (*car).blocked = false;
+    // MUTEXES[mutexNumber].unlock();
+}
+
+void threadHandleCrossroad1(short crossroadNumber) {
+
+    while (true) {
+        if (ENDING) return;
+
+        if (CROSSROAD_WAITING_LIST_1.empty()) usleep(10000);
+
+        while (!CROSSROAD_WAITING_LIST_1.empty()) {
+            MUTEXES[crossroadNumber].lock();
+            auto car  = CROSSROAD_WAITING_LIST_1.front();
+            CROSSROAD_WAITING_LIST_1.pop_front();
+            MUTEXES[crossroadNumber].unlock();
+            moveThroughCrossing(car, (*car).direction, crossroadNumber);
+        }
+    }
+}
+
+void threadHandleCrossroad2(short crossroadNumber) {
+
+    while (true) {
+        if (ENDING) return;
+
+        if (CROSSROAD_WAITING_LIST_2.empty()) usleep(10000);
+
+        while (!CROSSROAD_WAITING_LIST_2.empty()) {
+            MUTEXES[crossroadNumber].lock();
+            auto car  = CROSSROAD_WAITING_LIST_2.front();
+            CROSSROAD_WAITING_LIST_2.pop_front();
+            MUTEXES[crossroadNumber].unlock();
+            moveThroughCrossing(car, (*car).direction, crossroadNumber);
+        }
+    }
+}
+
+void threadHandleCrossroad3(short crossroadNumber) {
+
+    while (true) {
+        if (ENDING) return;
+
+        if (CROSSROAD_WAITING_LIST_3.empty()) usleep(10000);
+
+        while (!CROSSROAD_WAITING_LIST_3.empty()) {
+            MUTEXES[crossroadNumber].lock();
+            auto car  = CROSSROAD_WAITING_LIST_3.front();
+            CROSSROAD_WAITING_LIST_3.pop_front();
+            MUTEXES[crossroadNumber].unlock();
+            moveThroughCrossing(car, (*car).direction, crossroadNumber);
+        }
+    }
+}
+
+void threadHandleCrossroad4(short crossroadNumber) {
+
+    while (true) {
+        if (ENDING) return;
+
+        if (CROSSROAD_WAITING_LIST_4.empty()) usleep(10000);
+
+        while (!CROSSROAD_WAITING_LIST_4.empty()) {
+            MUTEXES[crossroadNumber].lock();
+            auto car  = CROSSROAD_WAITING_LIST_4.front();
+            CROSSROAD_WAITING_LIST_4.pop_front();
+            MUTEXES[crossroadNumber].unlock();
+            moveThroughCrossing(car, (*car).direction, crossroadNumber);
+        }
+    }
+}
+
+void addToCrossroadWaitingList(CAR *car, std::list<CAR*> &waitingList, short crossroadNumber) {
+    MUTEXES[crossroadNumber].lock();
+    (*car).blocked = true;
+    waitingList.push_back(car);
+    MUTEXES[crossroadNumber].unlock();
 }
 
 /*
@@ -134,7 +217,7 @@ void moveThroughCrossing(CAR *car, short direction, short mutexNumber) {
 */
 void moveInnerCar(CAR *car)
 {
-    std::mutex m;
+
     int startX = (*car).x;
     int startY = (*car).y;
 
@@ -145,10 +228,16 @@ void moveInnerCar(CAR *car)
         {
             switch ((*car).y) {
             case 14:
-                moveThroughCrossing(car, UP, 0);
+                (*car).direction = UP;
+                
+                addToCrossroadWaitingList(car, CROSSROAD_WAITING_LIST_1, 0);
+                while ((*car).blocked && !ENDING) usleep((*car).sleepTime);        
                 break;
             case 37:
-                moveThroughCrossing(car, UP, 3);
+                (*car).direction = UP;
+
+                addToCrossroadWaitingList(car, CROSSROAD_WAITING_LIST_4, 3);
+                while ((*car).blocked && !ENDING) usleep((*car).sleepTime);
                 break;
             default:
                 (*car).y--;
@@ -163,10 +252,16 @@ void moveInnerCar(CAR *car)
         {
             switch ((*car).y) {
             case 10:
-                moveThroughCrossing(car, DOWN, 1);
+                (*car).direction = DOWN;
+                
+                addToCrossroadWaitingList(car, CROSSROAD_WAITING_LIST_2, 1);
+                while ((*car).blocked && !ENDING) usleep((*car).sleepTime);  
                 break;
             case 33:
-                moveThroughCrossing(car, DOWN, 2);
+                (*car).direction = DOWN;
+                
+                addToCrossroadWaitingList(car, CROSSROAD_WAITING_LIST_3, 2);
+                while ((*car).blocked && !ENDING) usleep((*car).sleepTime);  
                 break;
             default:
                 (*car).y++;
@@ -186,7 +281,6 @@ void moveInnerCar(CAR *car)
 */
 void moveOuterCar(CAR *car)
 {
-    std::mutex m;
     int lap = 0;
 
     while (!ENDING)
@@ -201,10 +295,16 @@ void moveOuterCar(CAR *car)
         {
             switch ((*car).x) {
             case 90:
-                moveThroughCrossing(car, LEFT, 2);
+                (*car).direction = LEFT;
+                
+                addToCrossroadWaitingList(car, CROSSROAD_WAITING_LIST_3, 2);
+                while ((*car).blocked && !ENDING) usleep((*car).sleepTime);  
                 break;
             case 53:
-                moveThroughCrossing(car, LEFT, 3);
+                (*car).direction = LEFT;
+                
+                addToCrossroadWaitingList(car, CROSSROAD_WAITING_LIST_4, 3);
+                while ((*car).blocked && !ENDING) usleep((*car).sleepTime); 
                 break;
             default:
                 (*car).x--;
@@ -219,10 +319,16 @@ void moveOuterCar(CAR *car)
         {
             switch ((*car).x) {
             case 45:
-                moveThroughCrossing(car, RIGHT, 0);
+                (*car).direction = RIGHT;
+                
+                addToCrossroadWaitingList(car, CROSSROAD_WAITING_LIST_1, 0);
+                while ((*car).blocked && !ENDING) usleep((*car).sleepTime); 
                 break;
             case 82:
-                moveThroughCrossing(car, RIGHT, 1);
+                (*car).direction = RIGHT;
+                
+                addToCrossroadWaitingList(car, CROSSROAD_WAITING_LIST_2, 1);
+                while ((*car).blocked && !ENDING) usleep((*car).sleepTime); 
                 break;
             default:
                 (*car).x++;
@@ -276,6 +382,11 @@ int main(int argc, char const *argv[])
 
     std::thread printCarsThread(printCars);
 
+    std::thread crossroad1(threadHandleCrossroad1, 0);
+    std::thread crossroad2(threadHandleCrossroad2, 1);
+    std::thread crossroad3(threadHandleCrossroad3, 2);
+    std::thread crossroad4(threadHandleCrossroad4, 3);
+
     std::list<std::thread> threadList;
 
     std::uniform_int_distribution<> distY(2, 43);
@@ -317,6 +428,11 @@ int main(int argc, char const *argv[])
     }
 
     printCarsThread.join();
+
+    crossroad1.join();
+    crossroad2.join();
+    crossroad3.join();
+    crossroad4.join();
 
     while (!threadList.empty())
     {
