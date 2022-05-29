@@ -45,6 +45,7 @@ struct CAR
     char c;
     int color;
     bool active = true;
+    bool blocked = false;
 };
 
 std::list<CAR> CAR_INFO_LIST;
@@ -133,6 +134,7 @@ void moveThroughCrossing(CAR *car, short direction, short mutexNumber) {
 */
 void moveInnerCar(CAR *car)
 {
+    std::mutex m;
     int startX = (*car).x;
     int startY = (*car).y;
 
@@ -184,6 +186,7 @@ void moveInnerCar(CAR *car)
 */
 void moveOuterCar(CAR *car)
 {
+    std::mutex m;
     int lap = 0;
 
     while (!ENDING)
