@@ -35,7 +35,17 @@
    wtedy mogą inne przejechać.
 */
 
-std::mutex MUTEXES[4];
+/*
+    Etap III
+    Na skrzyżowaniu, pierwszy samochód, który czeka,
+    jako pierwszy może przejechać, gdy zwolni się skrzyżowanie.
+*/
+
+std::mutex WAITING_LIST_M[4];
+std::condition_variable WAITING_LIST_CV[4];
+
+std::mutex CROSSROAD_M[4];
+std::condition_variable CROSSROAD_CV[4];
 
 /*
     Struktura z informacją o danych samochodu.
@@ -47,7 +57,6 @@ struct CAR {
     char c;
     int color;
     int direction;
-    bool active = true;
     bool blocked = false;
 };
 
@@ -91,42 +100,46 @@ void printCars() {
             usleep(1'000);
         } else if (ch == 'q') {
             ENDING = true;
+            for (int i = 0; i < 4; i++) {
+                WAITING_LIST_CV[i].notify_all();
+                CROSSROAD_CV[i].notify_all();
+            }
+
             return;
         }
     }
     return;
 }
 
-void moveThroughCrossing(CAR *car, short direction, short mutexNumber) {
-    // MUTEXES[mutexNumber].lock();
-    switch (direction) {
+void moveThroughCrossing(CAR *car, short mutexNumber) {
+    switch ((*car).direction) {
         case UP:
         case DOWN:
-            for (int i = 0; i < 5; i++) {
-                if (direction == UP) {
+            for (int i = 0; i < 4; i++) {
+                if ((*car).direction == UP) {
                     (*car).y--;
                 } else {
                     (*car).y++;
                 }
-                if (i < 4) usleep((*car).sleepTime);
+                if (i < 3) usleep((*car).sleepTime);
             }
             break;
         case RIGHT:
         case LEFT:
-            for (int i = 0; i < 10; i++) {
-                if (direction == RIGHT) {
+            for (int i = 0; i < 9; i++) {
+                if ((*car).direction == RIGHT) {
                     (*car).x++;
                 } else {
                     (*car).x--;
                 }
-                if (i < 9) usleep((*car).sleepTime);
+                if (i < 8) usleep((*car).sleepTime);
             }
             break;
         default:
             break;
     }
+    
     (*car).blocked = false;
-    // MUTEXES[mutexNumber].unlock();
 }
 
 void threadHandleCrossroad(short crossroadNumber) {
@@ -148,27 +161,42 @@ void threadHandleCrossroad(short crossroadNumber) {
             break;
     }
 
-    while (true) {
-        if (ENDING) return;
-
-        while (!(*wl).empty()) {
-            MUTEXES[crossroadNumber].lock();
-            auto car = (*wl).front();
-            (*wl).pop_front();
-            MUTEXES[crossroadNumber].unlock();
-            moveThroughCrossing(car, (*car).direction, crossroadNumber);
+    while (!ENDING) {
+        if ((*wl).empty() && !ENDING) {
+            std::unique_lock ul(WAITING_LIST_M[crossroadNumber]);
+            WAITING_LIST_CV[crossroadNumber].wait(
+                ul, [wl] { return !(*wl).empty() || ENDING; });
+            ul.unlock();
         }
 
-        if ((*wl).empty()) usleep(10000);
+        if (ENDING) return;
+
+        while (!(*wl).empty() && !ENDING) {
+            {
+                std::lock_guard lg1(CROSSROAD_M[crossroadNumber]);
+                CAR *car;
+                {
+                    std::lock_guard lg2(WAITING_LIST_M[crossroadNumber]);
+                    car = (*wl).front();
+                    (*wl).pop_front();
+                }
+                moveThroughCrossing(car, crossroadNumber);
+            }
+            CROSSROAD_CV[crossroadNumber].notify_all();
+            usleep(1000);
+        }
     }
 }
 
 void addToCrossroadWaitingList(CAR *car, std::list<CAR *> &waitingList,
                                short crossroadNumber) {
-    MUTEXES[crossroadNumber].lock();
-    (*car).blocked = true;
-    waitingList.push_back(car);
-    MUTEXES[crossroadNumber].unlock();
+    {
+        std::lock_guard lg(WAITING_LIST_M[crossroadNumber]);
+        (*car).blocked = true;
+        waitingList.push_back(car);
+    }
+
+    WAITING_LIST_CV[crossroadNumber].notify_all();
 }
 
 /*
@@ -182,18 +210,24 @@ void moveInnerCar(CAR *car) {
         usleep((*car).sleepTime);
         if ((*car).y > 2 && (*car).x == 49) {
             switch ((*car).y) {
-                case 14:
+                case 14: {
                     (*car).direction = UP;
 
                     addToCrossroadWaitingList(car, CROSSROAD_WAITING_LIST_1, 0);
-                    while ((*car).blocked && !ENDING) usleep((*car).sleepTime);
-                    break;
-                case 37:
+                    std::unique_lock ul(CROSSROAD_M[0]);
+                    CROSSROAD_CV[0].wait(
+                        ul, [car] { return !(*car).blocked || ENDING; });
+                    ul.unlock();
+                } break;
+                case 37: {
                     (*car).direction = UP;
 
                     addToCrossroadWaitingList(car, CROSSROAD_WAITING_LIST_4, 3);
-                    while ((*car).blocked && !ENDING) usleep((*car).sleepTime);
-                    break;
+                    std::unique_lock ul(CROSSROAD_M[3]);
+                    CROSSROAD_CV[3].wait(
+                        ul, [car] { return !(*car).blocked || ENDING; });
+                    ul.unlock();
+                } break;
                 default:
                     (*car).y--;
                     break;
@@ -202,18 +236,24 @@ void moveInnerCar(CAR *car) {
             (*car).x++;
         } else if ((*car).y < 43 && (*car).x == 86) {
             switch ((*car).y) {
-                case 10:
+                case 10: {
                     (*car).direction = DOWN;
 
                     addToCrossroadWaitingList(car, CROSSROAD_WAITING_LIST_2, 1);
-                    while ((*car).blocked && !ENDING) usleep((*car).sleepTime);
-                    break;
-                case 33:
+                    std::unique_lock ul(CROSSROAD_M[1]);
+                    CROSSROAD_CV[1].wait(
+                        ul, [car] { return !(*car).blocked || ENDING; });
+                    ul.unlock();
+                } break;
+                case 33: {
                     (*car).direction = DOWN;
 
                     addToCrossroadWaitingList(car, CROSSROAD_WAITING_LIST_3, 2);
-                    while ((*car).blocked && !ENDING) usleep((*car).sleepTime);
-                    break;
+                    std::unique_lock ul(CROSSROAD_M[2]);
+                    CROSSROAD_CV[2].wait(
+                        ul, [car] { return !(*car).blocked || ENDING; });
+                    ul.unlock();
+                } break;
                 default:
                     (*car).y++;
                     break;
@@ -239,18 +279,24 @@ void moveOuterCar(CAR *car) {
 
         if ((*car).y == 35 && (*car).x > 29) {
             switch ((*car).x) {
-                case 90:
+                case 90: {
                     (*car).direction = LEFT;
 
                     addToCrossroadWaitingList(car, CROSSROAD_WAITING_LIST_3, 2);
-                    while ((*car).blocked && !ENDING) usleep((*car).sleepTime);
-                    break;
-                case 53:
+                    std::unique_lock ul(CROSSROAD_M[2]);
+                    CROSSROAD_CV[2].wait(
+                        ul, [car] { return !(*car).blocked || ENDING; });
+                    ul.unlock();
+                } break;
+                case 53: {
                     (*car).direction = LEFT;
 
                     addToCrossroadWaitingList(car, CROSSROAD_WAITING_LIST_4, 3);
-                    while ((*car).blocked && !ENDING) usleep((*car).sleepTime);
-                    break;
+                    std::unique_lock ul(CROSSROAD_M[3]);
+                    CROSSROAD_CV[3].wait(
+                        ul, [car] { return !(*car).blocked || ENDING; });
+                    ul.unlock();
+                } break;
                 default:
                     (*car).x--;
                     break;
@@ -259,18 +305,24 @@ void moveOuterCar(CAR *car) {
             (*car).y++;
         } else if ((*car).y == 12 && (*car).x < 115) {
             switch ((*car).x) {
-                case 45:
+                case 45: {
                     (*car).direction = RIGHT;
 
                     addToCrossroadWaitingList(car, CROSSROAD_WAITING_LIST_1, 0);
-                    while ((*car).blocked && !ENDING) usleep((*car).sleepTime);
-                    break;
-                case 82:
+                    std::unique_lock ul(CROSSROAD_M[0]);
+                    CROSSROAD_CV[0].wait(
+                        ul, [car] { return !(*car).blocked || ENDING; });
+                    ul.unlock();
+                } break;
+                case 82: {
                     (*car).direction = RIGHT;
 
                     addToCrossroadWaitingList(car, CROSSROAD_WAITING_LIST_2, 1);
-                    while ((*car).blocked && !ENDING) usleep((*car).sleepTime);
-                    break;
+                    std::unique_lock ul(CROSSROAD_M[1]);
+                    CROSSROAD_CV[1].wait(
+                        ul, [car] { return !(*car).blocked || ENDING; });
+                    ul.unlock();
+                } break;
                 default:
                     (*car).x++;
                     break;
