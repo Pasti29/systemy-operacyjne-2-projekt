@@ -31,8 +31,8 @@
     Utworzyć czekanie na skrzyżowaniu.
     Jeżeli samochód jest na skrzyżowaniu, to inne samochody, które chcą wjechać
     na to skrzyżowanie, muszą zaczekać. Jak już samochód wyjedzie ze
-   skrzyżowania, to jeden samochód może przejechać i jak ten przejedzie, to
-   wtedy mogą inne przejechać.
+    skrzyżowania, to jeden samochód może przejechać i jak ten przejedzie, to
+    wtedy mogą inne przejechać.
 */
 
 /*
@@ -196,7 +196,7 @@ void addToCrossroadWaitingList(CAR *car, std::list<CAR *> &waitingList,
         waitingList.push_back(car);
     }
 
-    WAITING_LIST_CV[crossroadNumber].notify_all();
+    WAITING_LIST_CV[crossroadNumber].notify_one();
 }
 
 /*
